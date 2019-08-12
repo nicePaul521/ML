@@ -40,5 +40,6 @@ def std_PCA(**argv):
 
 def pca_dec_vec(A):
     pca = std_PCA(n_commponts=1)
-    R2 = pca.fit_transform(A)  
+    R2 = pca.fit_transform(A)#矩阵A经过预处理和PCA减位
+    print R2  
     pca.inverse_transform(R2) 
