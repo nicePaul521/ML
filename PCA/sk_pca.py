@@ -7,6 +7,9 @@
 '''
 #here put the import lib
 import numpy as np
+import time
+import logging
+from sklearn.datasets import fetch_olivetti_faces
 from sklearn.decomposition import PCA
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import MinMaxScaler
@@ -44,3 +47,9 @@ def pca_dec_vec(A):
     print R2  
     Z2 = pca.inverse_transform(R2) #对降维后的数据进行逆运算，即先进行pca还原，再执行预处理的逆运算
     print Z2
+#下列是一个人脸识别的例子
+def loadDadaset():
+    logging.basicConfig(level=logging.INFO,format='%(asctime)s %(message)s')
+    data_home = 'datasets/'
+    logging.info('Start to loadset')
+    faces = fetch_olivetti_faces(data_home=data_home)
