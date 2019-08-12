@@ -35,14 +35,15 @@ def pca_prcess():
     Z = np.dot(R,U_reduce.T)
     print np.multiply(Z,scope)+mean
     return A,norm,U,U_reduce,Z
+#生成数据处理管道
 def std_PCA(**argv):
-    scaler = MinMaxScaler()
-    pca = PCA(**argv)
+    scaler = MinMaxScaler()#数据预处理
+    pca = PCA(**argv)#PCA降维
     pipeline = Pipeline([('scaler',scaler),('pca',pca)])
     return pipeline
-
+#对数据进行降维和还原，并且画出示意图
 def pca_dec_vec(A,norm,U,U_reduce,Z):
-    pca = std_PCA(n_components=1)
+    pca = std_PCA(n_components=1)#取了一列特征向量
     R2 = pca.fit_transform(A)#矩阵A经过预处理和PCA降维
     print R2  
     Z2 = pca.inverse_transform(R2) #对降维后的数据进行逆运算，即先进行pca还原，再执行预处理的逆运算
@@ -79,9 +80,23 @@ def pca_dec_vec(A,norm,U,U_reduce,Z):
                 xytext=(Z[0][0] + 0.2, Z[0][1] - 0.1), fontsize=10,
                 arrowprops=dict(arrowstyle="->", connectionstyle="arc3,rad=.2"))
     plt.show()
+    '''
+    图中正方形的点是原始数据经过预处理后（归一化，缩放）的数据，圆形的点是从一维恢复到二维后的数据
+    '''
 #下列是一个人脸识别的例子
 def loadDadaset():
     logging.basicConfig(level=logging.INFO,format='%(asctime)s %(message)s')
     data_home = 'datasets/'
     logging.info('Start to loadset')
-    faces = fetch_olivetti_faces(data_home=data_home)
+    faces = fetch_olivetti_faces(data_home=data_home)#根据pkz文件下载图像数据
+    logging.info("Done with load dataset")
+    X = faces.data#得到数据集
+    Y = faces.target#得到类别目标索引
+    targets = np.unique(Y)
+    target_names = np.array(["c%d" % t for t in targets])
+    n_targets = targets.shape[0]#得到类别数量
+    n_samples,h,w = faces.images.shape
+    print('sample count:{}\nTarget count:{}'.format(n_samples,n_targets))
+    print('Image size:{}x{}\nDataSet shape:{}\n'.format(w,h,X.shape))
+#显示照片阵列
+def plot_gallery(images,title,h,w,n_row=2)
