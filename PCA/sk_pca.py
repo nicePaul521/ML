@@ -7,6 +7,7 @@
 '''
 #here put the import lib
 import numpy as np
+from sklearn.decomposition import PCA
 #使用Numpy模拟PCA计算过程
 def pca_prcess():
     A = np.array([[3,2000],[2,3000],[4,5000],[5,8000],[1,2000]],dtype='float')
@@ -27,3 +28,5 @@ def pca_prcess():
     Z = np.dot(R,U_reduce.T)
     Z = np.multiply(Z,scope)+mean
     print Z#打印还原后的特征
+
+#hello world
