@@ -13,6 +13,7 @@ from sklearn.datasets import fetch_olivetti_faces
 from sklearn.decomposition import PCA
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import MinMaxScaler
+from matplotlib import pyplot as plt
 
 #使用Numpy模拟PCA计算过程
 def pca_prcess():
@@ -32,21 +33,52 @@ def pca_prcess():
     print R#打印降维后的特征
     #按照PCA还原原数据
     Z = np.dot(R,U_reduce.T)
-    Z = np.multiply(Z,scope)+mean
-    print Z#打印还原后的特征
-    return A
+    print np.multiply(Z,scope)+mean
+    return A,norm,U,U_reduce,Z
 def std_PCA(**argv):
     scaler = MinMaxScaler()
     pca = PCA(**argv)
-    pipeline = Pipeline([('scaler',scaler),('pca',pca),('pca',pca)])
+    pipeline = Pipeline([('scaler',scaler),('pca',pca)])
     return pipeline
 
-def pca_dec_vec(A):
-    pca = std_PCA(n_commponts=1)
+def pca_dec_vec(A,norm,U,U_reduce,Z):
+    pca = std_PCA(n_components=1)
     R2 = pca.fit_transform(A)#矩阵A经过预处理和PCA降维
     print R2  
     Z2 = pca.inverse_transform(R2) #对降维后的数据进行逆运算，即先进行pca还原，再执行预处理的逆运算
     print Z2
+    #绘制降维及恢复示意图
+    plt.figure(figsize=(6,6),dpi=144)
+    plt.title('physcial meaning of PCA')
+    ymin = xmin = -1
+    ymax = xmax = 1
+    plt.xlim(xmin, xmax)
+    plt.ylim(ymin, ymax)
+    ax = plt.gca()                                  # gca 代表当前坐标轴，即 'get current axis'
+    ax.spines['right'].set_color('none')            # 隐藏坐标轴
+    ax.spines['top'].set_color('none')
+
+    plt.scatter(norm[:, 0], norm[:, 1], marker='s', c='b')
+    plt.scatter(Z[:, 0], Z[:, 1], marker='o', c='r')
+    plt.arrow(0, 0, U[0][0], U[1][0], color='r', linestyle='-')
+    plt.arrow(0, 0, U[0][1], U[1][1], color='r', linestyle='-.')
+    plt.annotate(r'$U_{reduce} = u^{(1)}$',
+                xy=(U[0][0], U[1][0]), xycoords='data',
+                xytext=(U_reduce[0][0] + 0.2, U_reduce[1][0] - 0.1), fontsize=10,
+                arrowprops=dict(arrowstyle="->", connectionstyle="arc3,rad=.2"))
+    plt.annotate(r'$u^{(2)}$',
+                xy=(U[0][1], U[1][1]), xycoords='data',
+                xytext=(U[0][1] + 0.2, U[1][1] - 0.1), fontsize=10,
+                arrowprops=dict(arrowstyle="->", connectionstyle="arc3,rad=.2"))
+    plt.annotate(r'raw data',
+                xy=(norm[0][0], norm[0][1]), xycoords='data',
+                xytext=(norm[0][0] + 0.2, norm[0][1] - 0.2), fontsize=10,
+                arrowprops=dict(arrowstyle="->", connectionstyle="arc3,rad=.2"))
+    plt.annotate(r'projected data',
+                xy=(Z[0][0], Z[0][1]), xycoords='data',
+                xytext=(Z[0][0] + 0.2, Z[0][1] - 0.1), fontsize=10,
+                arrowprops=dict(arrowstyle="->", connectionstyle="arc3,rad=.2"))
+    plt.show()
 #下列是一个人脸识别的例子
 def loadDadaset():
     logging.basicConfig(level=logging.INFO,format='%(asctime)s %(message)s')
