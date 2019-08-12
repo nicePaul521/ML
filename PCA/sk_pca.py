@@ -40,6 +40,7 @@ def std_PCA(**argv):
 
 def pca_dec_vec(A):
     pca = std_PCA(n_commponts=1)
-    R2 = pca.fit_transform(A)#矩阵A经过预处理和PCA减位
+    R2 = pca.fit_transform(A)#矩阵A经过预处理和PCA降维
     print R2  
-    pca.inverse_transform(R2) 
+    Z2 = pca.inverse_transform(R2) #对降维后的数据进行逆运算，即先进行pca还原，再执行预处理的逆运算
+    print Z2
