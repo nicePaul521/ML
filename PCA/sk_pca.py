@@ -14,6 +14,7 @@ from sklearn.decomposition import PCA
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import MinMaxScaler
 from matplotlib import pyplot as plt
+from sklearn.model_selection import train_test_split
 
 #使用Numpy模拟PCA计算过程
 def pca_prcess():
@@ -84,7 +85,7 @@ def pca_dec_vec(A,norm,U,U_reduce,Z):
     图中正方形的点是原始数据经过预处理后（归一化，缩放）的数据，圆形的点是从一维恢复到二维后的数据
     '''
 #下列是一个人脸识别的例子
-def loadDadaset():
+def loadDataset():
     logging.basicConfig(level=logging.INFO,format='%(asctime)s %(message)s')
     data_home = 'datasets/'
     logging.info('Start to loadset')
@@ -92,11 +93,48 @@ def loadDadaset():
     logging.info("Done with load dataset")
     X = faces.data#得到数据集
     Y = faces.target#得到类别目标索引
-    targets = np.unique(Y)
-    target_names = np.array(["c%d" % t for t in targets])
+    targets = np.unique(Y)#去除重复索引
+    target_names = np.array(["c%d" % t for t in targets])#对类别索引加上前缀c
     n_targets = targets.shape[0]#得到类别数量
     n_samples,h,w = faces.images.shape
-    print('sample count:{}\nTarget count:{}'.format(n_samples,n_targets))
-    print('Image size:{}x{}\nDataSet shape:{}\n'.format(w,h,X.shape))
+    print('sample count:{}\nTarget count:{}'.format(n_samples,n_targets))#输出图片数量及类别数量
+    print('Image size:{}x{}\nDataSet shape:{}\n'.format(w,h,X.shape))#输出图片尺寸及数据集大小
+    return n_targets,X,Y,target_names,h,w
 #显示照片阵列
-def plot_gallery(images,title,h,w,n_row=2)
+def plot_gallery(images,title,h,w,n_row=2,n_col=5):
+    plt.figure(figsize=(2*n_col,2.2*n_row),dpi=144)
+    plt.subplots_adjust(bottom=0,left=.01,right=.99,top=.90,hspace=.01)#调整子图间距，left表示距离左边缘的距离，hspace表示子图横向间距
+    for i in range(n_row*n_col):
+        plt.subplot(n_row,n_col,i+1)
+        plt.imshow(images[i].reshape((h,w)),cmap=plt.cm.gray)#对图片进行绘制，gray表示黑-白色系
+        plt.title(title[i])
+        plt.axis('off')#关闭坐标轴
+    plt.show()
+#显示照片
+def plot_image(n_targets,X,Y,target_names,h,w):
+    n_row = 2
+    n_col = 6
+    sample_images = None
+    sample_titles = []
+    for i in range(n_targets):
+        people_images = X[Y==i]#得到一个所有类别等于i的数据集，即某个人的全部脸部图像
+        people_sample_index = np.random.randint(0,people_images.shape[0],1)#返回一个随机数
+        people_sample_image = people_images[people_sample_index,:]#得到某个人随机的图像
+        if sample_images is not None:
+            sample_images = np.concatenate((sample_images,people_sample_image),axis=0)#将数据进行拼接，参数0表示在列上进行拼接
+        else:
+            sample_images = people_sample_image
+        sample_titles.append(target_names[i])
+    plot_gallery(sample_images,sample_titles,h,w,n_row,n_col)
+#划分数据集为训练集和测试数据集，得到合理的K值，数值越大说明失真越小
+def plot_k(X,Y):
+    x_train,x_test,y_train,y_test = train_test_split(X,Y,testsize=0.2,randomstate=4)
+    print("Exploring explained variance ratio for dataset...")
+    candidate_components = range(10,300,30)
+    explained_ratios = []
+    start = time.clock()
+    for c in candidate_components:
+        pca = PCA(n_components=c)
+        x_pca = pca.fit_transform(X)
+        explained_ratios.append(np.sum(pca.explained_variance_ratio_))
+    print('Done in {:.2f}s'.format(time.clock()-start))
