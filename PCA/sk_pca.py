@@ -15,6 +15,9 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import MinMaxScaler
 from matplotlib import pyplot as plt
 from sklearn.model_selection import train_test_split
+from sklearn.model_selection import GridSearchCV
+from sklearn.svm import SVC
+from sklearn.metrics import confusion_matrix,classification_report
 
 #使用Numpy模拟PCA计算过程
 def pca_prcess():
@@ -126,15 +129,82 @@ def plot_image(n_targets,X,Y,target_names,h,w):
             sample_images = people_sample_image
         sample_titles.append(target_names[i])
     plot_gallery(sample_images,sample_titles,h,w,n_row,n_col)
+    return sample_images,sample_titles
 #划分数据集为训练集和测试数据集，得到合理的K值，数值越大说明失真越小
 def plot_k(X,Y):
-    x_train,x_test,y_train,y_test = train_test_split(X,Y,testsize=0.2,randomstate=4)
+    x_train,x_test,y_train,y_test = train_test_split(X,Y,test_size=0.2,random_state=4)
     print("Exploring explained variance ratio for dataset...")
-    candidate_components = range(10,300,30)
+    candidate_components = range(10,300,30)#k值范围
     explained_ratios = []
     start = time.clock()
     for c in candidate_components:
-        pca = PCA(n_components=c)
+        pca = PCA(n_components=c)#得到降维后特征数为k的pca模型
         x_pca = pca.fit_transform(X)
-        explained_ratios.append(np.sum(pca.explained_variance_ratio_))
+        explained_ratios.append(np.sum(pca.explained_variance_ratio_))#得到不同k值的数据的还原率
     print('Done in {:.2f}s'.format(time.clock()-start))
+    plt.figure(figsize=(8,6),dpi=144)
+    plt.grid()
+    plt.plot(candidate_components,explained_ratios)#绘制k与数据还原率的的曲线
+    plt.xlabel("Number of PCA Components")
+    plt.ylabel("Explained variance ratio")
+    plt.title('Explained variance ratio for PCA')
+    plt.yticks(np.arange(0.5,1.05,.05))
+    plt.xticks(np.arange(0,300,20))
+    plt.show()
+#
+def title_prefix(prefix, title):
+    return "{}: {}".format(prefix, title)
+#对不同数据还原率的图片进行对比
+def plot_mutiK(X,sample_images,sample_titles,h,w):
+    n_row = 1
+    n_col = 5
+
+    sample_images = sample_images[0:5]#取前五个图像和对应类别
+    sample_titles = sample_titles[0:5]
+
+    plotting_images = sample_images
+    plotting_titles = [title_prefix('orig', t) for t in sample_titles]#原图像的标题
+    candidate_components = [140, 75, 37, 19, 8]#不同K值，表示不同还原率
+    for c in candidate_components:
+        print("Fitting and projecting on PCA(n_components={}) ...".format(c))
+        start = time.clock()
+        pca = PCA(n_components=c)#n_commponents表示保留的主成分个数
+        pca.fit(X)#用X来训练模型
+        X_sample_pca = pca.transform(sample_images)#用训练好的模型对新数据进行降维
+        X_sample_inv = pca.inverse_transform(X_sample_pca)#将降维的数据还原成初始数据
+        plotting_images = np.concatenate((plotting_images, X_sample_inv), axis=0)#将图像拼接到数组中
+        sample_title_pca = [title_prefix('{}'.format(c), t) for t in sample_titles]
+        plotting_titles = np.concatenate((plotting_titles, sample_title_pca), axis=0)
+        print("Done in {0:.2f}s".format(time.clock() - start))
+
+    print("Plotting sample image with different number of PCA conpoments ...")
+    plot_gallery(plotting_images, plotting_titles, h, w,
+        n_row * (len(candidate_components) + 1), n_col)#绘制图像
+#利用PCA对数据降维后，再利用SVC支持向量机进行预测
+def pca_svc(X,Y,n_targets,target_names):
+    x_train,x_test,y_train,y_test = train_test_split(X,Y,test_size=0.2,random_state=4)
+    n_components = 140
+    print("Fitting PCA by using training data")
+    start = time.clock()
+    pca = PCA(n_components=n_components,svd_solver='randomized',whiten=True).fit(x_train)#得到pca训练模型
+    print("done in {:.2f}s".format(time.clock()-start))
+    print("projecting input data for pca")
+    start = time.clock()
+    x_train_pca = pca.transform(x_train)#对训练集降维
+    x_test_pca = pca.transform(x_test)#对测试集降维
+    print("Done in {:.2f}".format(time.clock()-start))
+    print("Searching the best parameters for SVC...")
+    #选择最佳的SVC模型参数，然后使用最佳模型参数对模型进行训练
+    param_grid = {'C':[1,5,10,50,100],'gamma':[0.0001,0.0005,0.001,0.005,0.01]}#参数矩阵
+    clf = GridSearchCV(SVC(kernel='rbf',class_weight='balanced'),param_grid,verbose=2,n_jobs=4)
+    clf = clf.fit(x_train_pca,y_train)
+    print("best paramter found by grid research is:")
+    print(clf.best_params_)#输出最优参数
+    #使用这一模型对测试样本进行训练
+    start = time.clock()
+    print("predict test dataset...")
+    y_pred = clf.best_estimator_.predict(x_test_pca)#得到最优参数模型
+    cm = confusion_matrix(y_test,y_pred,labels=range(n_targets))#得到混淆矩阵
+    print("Done in {:.2f}s".format(time.clock()-start))
+    print(cm)
+    print(classification_report(y_test,y_pred))#输出分类报告
